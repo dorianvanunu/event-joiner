@@ -9,24 +9,29 @@ import org.springframework.stereotype.Service;
 public class EventJoinService {
     Map<EventKey, RegistrationEvent> registrationEvents = new HashMap<EventKey, RegistrationEvent>();
 
-    public void addRegistrationEvent(EventKey eventKey, RegistrationEvent registrationEvent) {
-        registrationEvents.put(eventKey, registrationEvent);
+    public void addRegistrationEvent(RegistrationEvent registrationEvent) {
+        registrationEvents.put(registrationEvent.getKey(), registrationEvent);
     }
 
-    public CombinedEvent joinSalesEvent(SalesEvent salesEvent) {
+    public Optional<CombinedEvent> joinSalesEvent(SalesEvent salesEvent) {
         RegistrationEvent registrationEvent = registrationEvents.get(salesEvent.getKey());
 
-        EventKey key = salesEvent.getKey();
+        if (registrationEvent != null) {
+            EventKey key = salesEvent.getKey();
 
-        AuditData auditData = new AuditData("DetailedSalesEvent", "SLS");
+            AuditData auditData = new AuditData("DetailedSalesEvent", "SLS");
 
-        CombinedEventValue value = new CombinedEventValue();
+            CombinedEventValue value = new CombinedEventValue();
 
-        value.setModel(registrationEvent.getValue().getModel());
-        value.setCountry(registrationEvent.getValue().getCountry());
-        value.setQuantity(salesEvent.getValue().getQuantity());
+            value.setModel(registrationEvent.getValue().getModel());
+            value.setCountry(registrationEvent.getValue().getCountry());
+            value.setQuantity(salesEvent.getValue().getQuantity());
+            value.setSelling(registrationEvent.getValue().isSelling());
+            value.setSellingStatusDate(registrationEvent.getValue().getSellingStatusDate());
 
-        return new CombinedEvent(key, value, auditData);
+            return Optional.of(new CombinedEvent(key, value, auditData));
+        }
 
+        return Optional.empty();
     }
 }

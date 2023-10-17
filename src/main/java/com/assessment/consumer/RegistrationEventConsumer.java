@@ -21,7 +21,7 @@ public class RegistrationEventConsumer {
         EventKey key = registrationEvent.getKey();
         if (Objects.equals(key.getCountry(), "001")) {
             RegistrationEventValue registrationEventValue = registrationEvent.getValue();
-            eventJoinService.addRegistrationEvent(registrationEvent.getKey(), registrationEvent);
+            eventJoinService.addRegistrationEvent(registrationEvent);
         }
     }
 }

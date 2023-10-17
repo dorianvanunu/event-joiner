@@ -1,6 +1,7 @@
 package com.assessment.consumer;
 
 import com.assessment.model.event.*;
+import com.assessment.utils.TestUtils;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.support.serializer.JsonSerializer;
 import org.apache.kafka.clients.producer.ProducerConfig;
@@ -20,40 +21,38 @@ import java.util.concurrent.CountDownLatch;
 @SpringBootTest
 @EnableKafka
 @EmbeddedKafka(partitions = 1, brokerProperties = {"listeners=PLAINTEXT://localhost:9092", "port=9092"})
-public class KafkaMessageConsumerTest {
+public class EventJoinIntegrationTest {
     @Autowired
     private RegistrationEventConsumer consumer;
 
     @Autowired
     private EmbeddedKafkaBroker embeddedKafkaBroker;
 
-    private final CountDownLatch latch = new CountDownLatch(1);
+    private final CountDownLatch latch = new CountDownLatch(2);
 
     @KafkaListener(topics = "topic.a", groupId = "event-processing-group")
-    public void listen(RegistrationEvent registrationEvent) {
+    public void listenTopicA(RegistrationEvent registrationEvent) {
         latch.countDown();
     }
 
+    @KafkaListener(topics = "topic.b", groupId = "event-processing-group")
+    public void listenTopicB(SalesEvent salesEvent) {
+        latch.countDown();
+    }
 
     @Test
     public void testKafkaMessageConsumer() throws InterruptedException {
         EventKey key = new EventKey("001", "1234");
-
-        RegistrationEventValue registrationEventValue = new RegistrationEventValue(
-                "001", "int4123", true, "29525", "11", "int7218", "2023-06-30T18:21:31.000000Z", "REG03814"
-        );
-        AuditData auditDataRegistration = new AuditData("RGR", "Registration");
-        RegistrationEvent registrationEvent = new RegistrationEvent(key, registrationEventValue, auditDataRegistration);
+        RegistrationEvent registrationEvent = TestUtils.createRegistrationEvent(key);
 
         KafkaTemplate<EventKey, RegistrationEvent> kafkaTemplateRegistration = getRegistrationEventKafkaTemplate();
         ProducerRecord<EventKey, RegistrationEvent> record = new ProducerRecord<>("topic.a", key, registrationEvent);
         kafkaTemplateRegistration.send("topic.a", key, registrationEvent);
 
-        SalesEventValue salesEventValue = new SalesEventValue("29525", "03814", "2", "2023-07-30T18:21:31.000000Z", "001");
-        AuditData auditDataSales = new AuditData("SLS", "SalesEvent");
-        SalesEvent salesEvent = new SalesEvent(key, salesEventValue, auditDataSales);
+        SalesEvent salesEvent = TestUtils.createSalesEvent(key);
         KafkaTemplate<EventKey, SalesEvent> kafkaTemplateSales = getSalesEventKafkaTemplate();
         kafkaTemplateSales.send("topic.b", key, salesEvent);
+
         latch.await();
     }
 
